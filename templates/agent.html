@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Agent | Personal Stock Agent</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script>
+    async function sendMessage() {
+      const userInput = document.getElementById("userMessage");
+      const chatBox = document.getElementById("chatBox");
+
+      const message = userInput.value.trim();
+      if (!message) return;
+
+      // Show user message
+      const userDiv = document.createElement("div");
+      userDiv.classList.add("chat-message", "user-message");
+      userDiv.innerText = message;
+      chatBox.appendChild(userDiv);
+
+      // Clear input
+      userInput.value = "";
+
+      // Send to Flask backend
+      const response = await fetch("{{ url_for('agent_chat') }}", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: message })
+      });
+      const data = await response.json();
+
+      // Show bot reply
+      const botDiv = document.createElement("div");
+      botDiv.classList.add("chat-message", "bot-message");
+      botDiv.innerText = data.reply;
+      chatBox.appendChild(botDiv);
+
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }
+  </script>
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="nav-brand">Personal Stock Agent</div>
+    <ul class="nav-links">
+      <li><a href="{{ url_for('dashboard') }}">Home</a></li>
+      <li><a href="{{ url_for('reports') }}">Reports</a></li>
+      <li><a href="{{ url_for('agent') }}" class="active">Agent</a></li>
+      <li><a href="{{ url_for('profile') }}">Profile</a></li>
+      <li><a href="{{ url_for('logout') }}">Sign Out</a></li>
+    </ul>
+  </nav>
+
+<!-- Chat Interface -->
+<main class="dashboard-main">
+  <h1>Agent Chat</h1>
+  <p>TickerBot is your personal assistant when it comes to evaluating the market, exploring trends and better educating yourself when it comes to trading.<br>TickerBot is powered by OpenAI. Please consult a financial professional before taking critical actions within the market. Your agent should be used as a tool, not a financial expert.</p>
+  <div id="chatBox" class="chat-box"></div>
+
+  <div class="chat-input">
+    <input type="text" id="userMessage" placeholder="Ask the agent..." 
+           onkeypress="if(event.key === 'Enter'){sendMessage()}">
+    <button onclick="sendMessage()">Send</button>
+  </div>
+</main>
+
+<script>
+  // Initial welcome messages
+  window.onload = function() {
+    const chatBox = document.getElementById("chatBox");
+
+    // First intro message
+    const botDiv1 = document.createElement("div");
+    botDiv1.classList.add("chat-message", "bot-message");
+    botDiv1.innerText = "Hi, {{ user_email }}! My name is TickerBot 📈. How can I be of service today?";
+    chatBox.appendChild(botDiv1);
+
+    // Second intro message (slight delay for natural feel)
+    setTimeout(() => {
+      const botDiv2 = document.createElement("div");
+      botDiv2.classList.add("chat-message", "bot-message");
+      botDiv2.innerText = "If you're unsure of what my capabilities are, feel free to ask for \"Options\" or \"What can you do?\"";
+      chatBox.appendChild(botDiv2);
+
+      // auto-scroll to bottom
+      chatBox.scrollTop = chatBox.scrollHeight;
+    }, 800); // delay of 0.8 seconds
+  }
+</script>
+</body>
+</html>

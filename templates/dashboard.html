@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dashboard | Stock Agent</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<!-- Navigation Bar -->
+<nav class="navbar">
+  <div class="nav-brand">Personal Stock Agent</div>
+  <ul class="nav-links">
+    <li><a href="{{ url_for('dashboard') }}" class="active">Home</a></li>
+    <li><a href="{{ url_for('reports') }}">Reports</a></li>
+    <li><a href="{{ url_for('agent') }}">Agent</a></li>
+    <li><a href="{{ url_for('profile') }}">Profile</a></li>
+    <li><a href="{{ url_for('logout') }}">Sign Out</a></li>
+  </ul>
+</nav>
+
+<!-- Dashboard Content -->
+<main class="dashboard-main">
+  <h1>Welcome back, PennockSystems!</h1>
+
+  <!-- Profile Card -->
+<section class="profile-card">
+  <div class="profile-header">
+    <img src="{{ url_for('static', filename='images/pelosi.jpg') }}" alt="Profile Picture" class="profile-pic">
+    <div class="profile-info">
+      <h2>{{ stats.name }}</h2>
+      <p>{{ stats.subtitle }}</p>
+    </div>
+  </div>
+  <div class="profile-stats">
+    <div class="stat"><strong>Trades</strong><br>{{ stats.trades }}</div>
+    <div class="stat"><strong>Issuers</strong><br>{{ stats.issuers }}</div>
+    <div class="stat"><strong>Volume</strong><br>{{ stats.volume }}</div>
+    <div class="stat"><strong>Last Traded</strong><br>{{ stats.last_traded }}</div>
+    <div class="stat"><strong>District</strong><br>{{ stats.district }}</div>
+    <div class="stat"><strong>Years Active</strong><br>{{ stats.years_active }}</div>
+    <div class="stat"><strong>Date of Birth</strong><br>{{ stats.dob }}</div>
+    <div class="stat"><strong>Age</strong><br>{{ stats.age }}</div>
+  </div>
+</section>
+
+
+  <!-- Widgets Section -->
+  <section class="dashboard-widgets">
+    <div class="widget">
+      <h3>Recent Trades</h3>
+      <p>No recent activity yet.</p>
+    </div>
+    <div class="widget">
+      <h3>Alert Settings</h3>
+      <p>Configure which stocks to track and when to be notified.</p>
+    </div>
+    <div class="widget">
+      <h3>Account Summary</h3>
+      <p>Signed in as <strong>{{ user_email }}</strong></p>
+    </div>
+  </section>
+</main>
+</body>
+</html>

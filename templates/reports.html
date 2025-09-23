@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Reports | Pelosi Tracker</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script>
+    // Simple filter for demo – will later be powered by backend
+    function filterReports() {
+      const filter = document.getElementById("timeFilter").value;
+      document.getElementById("selectedFilter").innerText = 
+        "Showing reports for: " + filter;
+    }
+  </script>
+</head>
+<body>
+  <!-- Navigation Bar -->
+  <nav class="navbar">
+    <div class="nav-brand">Pelosi Tracker</div>
+    <ul class="nav-links">
+      <li><a href="{{ url_for('dashboard') }}">Home</a></li>
+      <li><a href="{{ url_for('reports') }}" class="active">Reports</a></li>
+      <li><a href="{{ url_for('agent') }}">Agent</a></li>
+      <li><a href="{{ url_for('profile') }}">Profile</a></li>
+      <li><a href="{{ url_for('logout') }}">Sign Out</a></li>
+    </ul>
+  </nav>
+
+  <!-- Reports Content -->
+  <main class="dashboard-main">
+    <h1>Reports</h1>
+    <p>Select a time window to view recent stock moves.</p>
+
+    <!-- Filter Dropdown -->
+    <div class="filter-bar">
+      <label for="timeFilter">Filter by:</label>
+      <select id="timeFilter" onchange="filterReports()">
+        <option value="Last 24 Hours">Last 24 Hours</option>
+        <option value="Last 30 Days">Last 30 Days</option>
+        <option value="Last 6 Months">Last 6 Months</option>
+        <option value="Last 1 Year">Last 1 Year</option>
+      </select>
+    </div>
+
+    <p id="selectedFilter" class="filter-text">Showing reports for: Last 24 Hours</p>
+
+    <!-- Report Table -->
+    <div class="report-table-container">
+      <table class="report-table">
+<thead>
+  <tr>
+    <th>Ticker</th>
+    <th>Action</th>
+    <th>Transaction Date</th>
+    <th>Disclosure Date</th>
+    <th>Amount</th>
+  </tr>
+</thead>
+        <tbody>
+          {% if reports %}
+            {% for r in reports %}
+              <tr>
+                <td>{{ r.ticker }}</td>
+                <td>{{ r.action }}</td>
+                <td>{{ r.time }}</td>
+                <td>{{ r.change }}</td>
+                <td>{{ r.price }}</td>
+              </tr>
+            {% endfor %}
+          {% else %}
+            <tr>
+              <td colspan="5" style="text-align:center; color:gray;">
+                No trades found for Nancy Pelosi.
+              </td>
+            </tr>
+          {% endif %}
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>
