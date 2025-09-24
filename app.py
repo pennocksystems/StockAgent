@@ -13,11 +13,11 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'  # Required for flashing messages & sessions
 
-# Initialize OpenAI client (reads OPENAI_API_KEY from env automatically)
+# Just load the API key from env – don’t create client globally
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     print("⚠️  WARNING: OPENAI_API_KEY is not set in your environment (.env)")
-client = OpenAI(api_key=OPENAI_API_KEY)
+
 
 # ----------------------
 # Routes
@@ -169,28 +169,36 @@ def agent_chat():
         return jsonify({"reply": "Please enter a message."}), 400
 
     if not OPENAI_API_KEY:
-        # Return a friendly error instead of crashing the route
         return jsonify({"reply": "OpenAI API key is missing. Set OPENAI_API_KEY in your .env."}), 500
 
     try:
+        # ✅ Initialize OpenAI client here, not globally
+        from openai import OpenAI
+        client = OpenAI(api_key=OPENAI_API_KEY)
+
         completion = client.chat.completions.create(
             model="gpt-4o-mini",  # or "gpt-4o" for more advanced reasoning
             messages=[
-                {"role": "system", "content": (
-                    "You are TickerBot 📈, a helpful assistant that educates users "
-                    "on stock market trends, reports, and financial concepts. "
-                    "You are not a financial advisor and should remind users to "
-                    "consult professionals before trading."
-                )},
+                {
+                    "role": "system",
+                    "content": (
+                        "You are TickerBot 📈, a helpful assistant that educates users "
+                        "on stock market trends, reports, and financial concepts. "
+                        "You are not a financial advisor and should remind users to "
+                        "consult professionals before trading."
+                    )
+                },
                 {"role": "user", "content": user_message},
             ]
         )
+
         reply = completion.choices[0].message.content
         return jsonify({"reply": reply})
+
     except Exception as e:
-        # Log the exception and return a controlled error so fetch() doesn't hard-crash
         print("OpenAI error:", e)
         return jsonify({"reply": f"⚠️ Error connecting to OpenAI: {e}"}), 502
+
 
 @app.route('/profile')
 def profile():
