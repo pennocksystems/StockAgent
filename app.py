@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 import re
 import os
 from dotenv import load_dotenv
-import openai  # ✅ use the openai module directly
+import openai  # ✅ only use the openai module, not OpenAI()
 
 # ----------------------
 # Setup
@@ -13,10 +13,10 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'  # Required for flashing messages & sessions
 
-# Load API key from environment
+# Configure OpenAI
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
-    print("⚠️ WARNING: OPENAI_API_KEY is not set in your environment (.env)")
+    print("⚠️ WARNING: OPENAI_API_KEY is not set in your environment")
 openai.api_key = OPENAI_API_KEY
 
 # ----------------------
@@ -33,7 +33,6 @@ def login():
         email = request.form['email']
         password = request.form['password']
 
-        # Fake login for now
         if email == 'admin@pennocksystems.com' and password == 'BluePanda2025':
             session['user_email'] = email
             return redirect(url_for('dashboard'))
@@ -56,13 +55,13 @@ def dashboard():
         resp = requests.get(url, timeout=20, headers={"User-Agent": "StockAgent/1.0"})
         soup = BeautifulSoup(resp.text, "lxml")
 
-        # --- Name & subtitle ---
+        # Name & subtitle
         name_el = soup.find("h1")
         subtitle_el = soup.find("h2") or soup.find("p")
         pelosi_stats["name"] = name_el.get_text(strip=True) if name_el else "Nancy Pelosi"
         pelosi_stats["subtitle"] = subtitle_el.get_text(" / ", strip=True) if subtitle_el else "Democrat / House / California"
 
-        # --- Extract stats from plain text (robust vs DOM changes) ---
+        # Extract stats via regex
         page_text = soup.get_text(" ", strip=True)
 
         def grab(pattern, default="—"):
@@ -82,8 +81,8 @@ def dashboard():
 
     except Exception as e:
         error_message = f"Error fetching Pelosi profile stats: {e}"
-        pelosi_stats = {"name": "Nancy Pelosi", "subtitle": "Democrat / House / California"}
         print("Dashboard scrape error:", e)
+        pelosi_stats = {"name": "Nancy Pelosi", "subtitle": "Democrat / House / California"}
 
     if error_message:
         flash(error_message)
@@ -157,8 +156,8 @@ def agent_chat():
     if not user_message:
         return jsonify({"reply": "Please enter a message."}), 400
 
-    if not OPENAI_API_KEY:
-        return jsonify({"reply": "OpenAI API key is missing. Set OPENAI_API_KEY in your .env."}), 500
+    if not openai.api_key:
+        return jsonify({"reply": "OpenAI API key is missing."}), 500
 
     try:
         completion = openai.chat.completions.create(
