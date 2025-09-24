@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 import re
 import os
 from dotenv import load_dotenv
-from openai import OpenAI  # ✅ modern SDK (openai>=1.0.0)
+import openai  # ✅ use the new SDK directly
 
 # ----------------------
 # Setup
@@ -13,11 +13,10 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'  # Required for flashing messages & sessions
 
-# Just load the API key from env – don’t create client globally
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
+# Load OpenAI key
+openai.api_key = os.getenv("OPENAI_API_KEY")
+if not openai.api_key:
     print("⚠️  WARNING: OPENAI_API_KEY is not set in your environment (.env)")
-
 
 # ----------------------
 # Routes
@@ -62,7 +61,7 @@ def dashboard():
         pelosi_stats["name"] = name_el.get_text(strip=True) if name_el else "Nancy Pelosi"
         pelosi_stats["subtitle"] = subtitle_el.get_text(" / ", strip=True) if subtitle_el else "Democrat / House / California"
 
-        # --- Extract stats from plain text (robust vs DOM changes) ---
+        # --- Extract stats from plain text ---
         page_text = soup.get_text(" ", strip=True)
 
         def grab(pattern, default="—"):
@@ -78,7 +77,6 @@ def dashboard():
         pelosi_stats["dob"]          = grab(r'(\d{4}-\d{2}-\d{2})\s+Date of Birth\b')
         pelosi_stats["age"]          = grab(r'(\d+)\s+Age\b')
 
-        # Debug to confirm clean values
         print("Parsed Pelosi Stats:", pelosi_stats)
 
     except Exception as e:
@@ -141,7 +139,6 @@ def reports():
 
 @app.route('/raw_reports_capitol')
 def raw_reports_capitol():
-    """Debug endpoint: fetch raw HTML snippet of Pelosi's page."""
     try:
         url = "https://www.capitoltrades.com/politicians/P000197"
         response = requests.get(url, timeout=20, headers={"User-Agent": "StockAgent/1.0"})
@@ -168,16 +165,12 @@ def agent_chat():
     if not user_message:
         return jsonify({"reply": "Please enter a message."}), 400
 
-    if not OPENAI_API_KEY:
-        return jsonify({"reply": "OpenAI API key is missing. Set OPENAI_API_KEY in your .env."}), 500
+    if not openai.api_key:
+        return jsonify({"reply": "OpenAI API key is missing. Set OPENAI_API_KEY in your Render environment."}), 500
 
     try:
-        # ✅ Initialize OpenAI client here, not globally
-        from openai import OpenAI
-        client = OpenAI(api_key=OPENAI_API_KEY)
-
-        completion = client.chat.completions.create(
-            model="gpt-4o-mini",  # or "gpt-4o" for more advanced reasoning
+        completion = openai.chat.completions.create(
+            model="gpt-4o-mini",
             messages=[
                 {
                     "role": "system",
@@ -199,7 +192,6 @@ def agent_chat():
         print("OpenAI error:", e)
         return jsonify({"reply": f"⚠️ Error connecting to OpenAI: {e}"}), 502
 
-
 @app.route('/profile')
 def profile():
     if 'user_email' not in session:
@@ -218,7 +210,6 @@ def logout():
     flash("You have been signed out.")
     return redirect(url_for('login'))
 
-# Optional: simple health check
 @app.route('/health')
 def health():
     return jsonify({"status": "ok"}), 200
