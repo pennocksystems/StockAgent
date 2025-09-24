@@ -4,7 +4,6 @@ from bs4 import BeautifulSoup
 import re
 import os
 from dotenv import load_dotenv
-import openai  # ✅ only use the openai module, not OpenAI()
 
 # ----------------------
 # Setup
@@ -13,11 +12,11 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'  # Required for flashing messages & sessions
 
-# Configure OpenAI
+# Load OpenAI key
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 if not OPENAI_API_KEY:
     print("⚠️ WARNING: OPENAI_API_KEY is not set in your environment")
-openai.api_key = OPENAI_API_KEY
+
 
 # ----------------------
 # Routes
@@ -25,6 +24,7 @@ openai.api_key = OPENAI_API_KEY
 @app.route('/')
 def home():
     return redirect(url_for('login'))
+
 
 @app.route('/login', methods=['GET', 'POST'])
 def login():
@@ -40,6 +40,7 @@ def login():
             error = 'Invalid credentials. Try again.'
 
     return render_template('login.html', error=error)
+
 
 @app.route('/dashboard')
 def dashboard():
@@ -61,7 +62,7 @@ def dashboard():
         pelosi_stats["name"] = name_el.get_text(strip=True) if name_el else "Nancy Pelosi"
         pelosi_stats["subtitle"] = subtitle_el.get_text(" / ", strip=True) if subtitle_el else "Democrat / House / California"
 
-        # Extract stats via regex
+        # Extract stats
         page_text = soup.get_text(" ", strip=True)
 
         def grab(pattern, default="—"):
@@ -93,6 +94,7 @@ def dashboard():
         stats=pelosi_stats
     )
 
+
 @app.route('/reports')
 def reports():
     if 'user_email' not in session:
@@ -114,7 +116,6 @@ def reports():
             rows = table.find("tbody").find_all("tr")
             for row in rows:
                 cols = [c.get_text(strip=True) for c in row.find_all("td")]
-
                 if len(cols) >= 6:
                     pelosi_trades.append({
                         "ticker": cols[0],
@@ -137,6 +138,7 @@ def reports():
         reports=pelosi_trades
     )
 
+
 @app.route('/agent')
 def agent():
     if 'user_email' not in session:
@@ -144,6 +146,7 @@ def agent():
         return redirect(url_for('login'))
 
     return render_template('agent.html', user_email=session['user_email'])
+
 
 @app.route('/agent_chat', methods=['POST'])
 def agent_chat():
@@ -156,13 +159,19 @@ def agent_chat():
     if not user_message:
         return jsonify({"reply": "Please enter a message."}), 400
 
-    if not openai.api_key:
+    if not OPENAI_API_KEY:
         return jsonify({"reply": "OpenAI API key is missing."}), 500
 
     try:
-        completion = openai.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {OPENAI_API_KEY}"
+        }
+        payload = {
+            "model": "gpt-4o-mini",
+            "temperature": 0.4,
+            "max_tokens": 400,
+            "messages": [
                 {
                     "role": "system",
                     "content": (
@@ -172,15 +181,25 @@ def agent_chat():
                         "consult professionals before trading."
                     )
                 },
-                {"role": "user", "content": user_message},
+                {"role": "user", "content": user_message}
             ]
-        )
-        reply = completion.choices[0].message.content
+        }
+
+        response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=payload)
+        response.raise_for_status()
+        data = response.json()
+
+        if "choices" in data and len(data["choices"]) > 0:
+            reply = data["choices"][0]["message"]["content"]
+        else:
+            reply = "⚠️ Unexpected response format from OpenAI."
+
         return jsonify({"reply": reply})
 
     except Exception as e:
-        print("OpenAI error:", e)
+        print("OpenAI REST API error:", e)
         return jsonify({"reply": f"⚠️ Error connecting to OpenAI: {e}"}), 502
+
 
 @app.route('/profile')
 def profile():
@@ -190,9 +209,11 @@ def profile():
 
     return render_template('profile.html', user_email=session['user_email'])
 
+
 @app.route('/signup')
 def signup():
     return "<h1>Signup page coming soon!</h1>"
+
 
 @app.route('/logout')
 def logout():
@@ -200,9 +221,11 @@ def logout():
     flash("You have been signed out.")
     return redirect(url_for('login'))
 
+
 @app.route('/health')
 def health():
     return jsonify({"status": "ok"}), 200
+
 
 if __name__ == '__main__':
     app.run(debug=True)
