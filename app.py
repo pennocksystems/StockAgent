@@ -4,7 +4,7 @@ from bs4 import BeautifulSoup
 import re
 import os
 from dotenv import load_dotenv
-import openai  # ✅ use the new SDK directly
+import openai  # ✅ use the openai module directly
 
 # ----------------------
 # Setup
@@ -13,10 +13,11 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = 'supersecretkey'  # Required for flashing messages & sessions
 
-# Load OpenAI key
-openai.api_key = os.getenv("OPENAI_API_KEY")
-if not openai.api_key:
-    print("⚠️  WARNING: OPENAI_API_KEY is not set in your environment (.env)")
+# Load API key from environment
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    print("⚠️ WARNING: OPENAI_API_KEY is not set in your environment (.env)")
+openai.api_key = OPENAI_API_KEY
 
 # ----------------------
 # Routes
@@ -61,7 +62,7 @@ def dashboard():
         pelosi_stats["name"] = name_el.get_text(strip=True) if name_el else "Nancy Pelosi"
         pelosi_stats["subtitle"] = subtitle_el.get_text(" / ", strip=True) if subtitle_el else "Democrat / House / California"
 
-        # --- Extract stats from plain text ---
+        # --- Extract stats from plain text (robust vs DOM changes) ---
         page_text = soup.get_text(" ", strip=True)
 
         def grab(pattern, default="—"):
@@ -117,11 +118,11 @@ def reports():
 
                 if len(cols) >= 6:
                     pelosi_trades.append({
-                        "ticker": cols[0],     # Ticker
-                        "action": cols[4],     # Buy/Sell
-                        "time": cols[2],       # Transaction Date
-                        "price": cols[5],      # Amount
-                        "change": cols[1]      # Disclosure Date
+                        "ticker": cols[0],
+                        "action": cols[4],
+                        "time": cols[2],
+                        "price": cols[5],
+                        "change": cols[1]
                     })
 
     except Exception as e:
@@ -136,15 +137,6 @@ def reports():
         user_email=session['user_email'],
         reports=pelosi_trades
     )
-
-@app.route('/raw_reports_capitol')
-def raw_reports_capitol():
-    try:
-        url = "https://www.capitoltrades.com/politicians/P000197"
-        response = requests.get(url, timeout=20, headers={"User-Agent": "StockAgent/1.0"})
-        return response.text
-    except Exception as e:
-        return f"<pre>Error: {e}</pre>"
 
 @app.route('/agent')
 def agent():
@@ -165,8 +157,8 @@ def agent_chat():
     if not user_message:
         return jsonify({"reply": "Please enter a message."}), 400
 
-    if not openai.api_key:
-        return jsonify({"reply": "OpenAI API key is missing. Set OPENAI_API_KEY in your Render environment."}), 500
+    if not OPENAI_API_KEY:
+        return jsonify({"reply": "OpenAI API key is missing. Set OPENAI_API_KEY in your .env."}), 500
 
     try:
         completion = openai.chat.completions.create(
@@ -184,7 +176,6 @@ def agent_chat():
                 {"role": "user", "content": user_message},
             ]
         )
-
         reply = completion.choices[0].message.content
         return jsonify({"reply": reply})
 
